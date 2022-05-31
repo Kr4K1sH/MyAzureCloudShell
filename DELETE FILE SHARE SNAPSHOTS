@@ -1,0 +1,7 @@
+$shareName = "FileShareName"
+$storageAccountName = "StorageAccountName"
+$StorageAccountKey = "StorageAccountKey"
+$storageAcctContext = New-AzureStorageContext  -StorageAccountName $storageAccountName -StorageAccountKey $StorageAccountKey
+$OldSnapShots = Get-AzStorageShare -Context $storageAcctContext | Where-Object { $_.Name -eq $shareName -and $_.IsSnapshot -eq $true } | Where-Object {$_.SnapshotTime -lt "SnapshotTime"}
+#SnapShotTime in UTC format 4/1/2020 2:02:11 AM +00:00 so every snapshot older than that date time will be removed.
+ForEach ($OldSnapshot in $OldSnapshots) {Remove-AzStorageShare -Share $OldSnapshot -Confirm:$false -Force}
