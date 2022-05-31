@@ -1,0 +1,39 @@
+Requirements
+    · The VM needs to be in deallocated state (stopped).
+    · The separate OS disk needs to be in unattached state.
+    · The VM size and storage type need to be compatible with the separate OS disk.
+Action plan
+    1. For managed VMs.
+            a. Using Azure PowerShell execute the following script (replace the highlighted sections)
+        $subscriptionId = "<SUBSCRIPTION_ID>"
+        $vmName = "<VM_NAME>"
+        $rgName = "<RESOURCE_GROUP_NAME>"
+        $diskName = "<NEW_OS_DISK_NAME>"
+        
+        Login-AzureRmAccount
+        Select-AzureRmSubscription -SubscriptionId $subscriptionId
+        
+        $vm = Get-AzureRmVM -ResourceGroupName $rgName -Name $vmName
+        Stop-AzureRmVM -ResourceGroupName $rgName -Name $vmName -Force
+        $disk = Get-AzureRmDisk -ResourceGroupName $rgName -Name $diskName
+        Set-AzureRmVMOSDisk -VM $vm -ManagedDiskId $disk.Id -Name $disk.Name
+        Update-AzureRmVM -ResourceGroupName $rgName -VM $vm
+        Start-AzureRmVM -Name $vm.Name -ResourceGroupName $rgName
+    2. For unmanaged VMs.
+            a. Using Azure PowerShell execute the following script (replace the highlighted sections)
+        $subscriptionId = "<SUBSCRIPTION_ID>"
+        $rgName = "<RESOURCE_GROUP_NAME>"
+        $vmName = "<VM_NAME>"
+        $vhdURI = "<NEW_OS_DISK_VHD_URI>"
+        
+        Connect-AzureRmAccount
+        Select-AzureRmSubscription -SubscriptionID $subscriptionId
+        
+        $vm = Get-AzureRMVM -ResourceGroupName $rgName -Name $vmName
+        Stop-AzureRmVM -ResourceGroupName $rgName -Name $vmName -Force
+        $vm.StorageProfile.OsDisk.Vhd.Uri = $vhdURI
+        Update-AzureRmVM -ResourceGroupName $rgName -VM $vm
+        Start-AzureRmVM -Name $vm.Name -ResourceGroupName $rgName
+More information:
+    · Change the OS disk used by an Azure VM using PowerShell
+    · Change the OS disk used by an Azure VM using the CLI
