@@ -1,0 +1,45 @@
+Param (
+    [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()]
+    [String] $AzureSubscriptionId,
+    [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()]
+    [String] $FileShareName
+)
+ 
+[Int]$maxSnapshots = 24
+ 
+$connectionName = "AzureRunAsConnection"
+ 
+Try {
+    #! Get the connection "AzureRunAsConnection "
+    $servicePrincipalConnection = Get-AutomationConnection -Name $connectionName
+    Write-Output "Logging in to Azure..."
+    Connect-AzAccount -ServicePrincipal `
+        -TenantId $servicePrincipalConnection.TenantId `
+        -ApplicationId $servicePrincipalConnection.ApplicationId `
+        -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint
+}
+Catch {
+    If (!$servicePrincipalConnection) {
+        $ErrorMessage = "Connection $connectionName not found..."
+        throw $ErrorMessage
+    }
+    Else {
+        Write-Error -Message $_.Exception
+        throw $_.Exception
+    }
+}
+ 
+Select-AzSubscription -SubscriptionId $AzureSubscriptionId
+ 
+# List the current snapshots on the source share
+$snapshots = Get-AzStorageShare `
+    -Context $sourceContext.Context | `
+Where-Object { $_.Name -eq $FileShareName -and $_.IsSnapshot -eq $true}
+ 
+If ((($snapshots.count) -ge $maxSnapshots) {
+    $manualSnapshots = $snapshots | where-object {$_.ShareProperties.Metadata.Keys -eq "AzureBackupProtected"}
+    Remove-AzStorageShare -Share $manualSnapshots[0].CloudFileShare -Force
+}
+ 
+$sourceShare = Get-AzStorageShare -Context $sourceContext.Context -Name $FileShareName
+$sourceSnapshot = $sourceShare.CloudFileShare.Snapshot()
