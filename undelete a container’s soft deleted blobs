@@ -1,0 +1,33 @@
+To undelete a container’s soft deleted blobs (ONLY WORKS FOR NO VERSIONING ENABLED ACCOUNTS):
+$storageAccountName = "xxxx"
+$StorageAccountKey = "xxxx"
+$storageContainer = "xxxx"
+#get context
+$ctx = New-AzureStorageContext -StorageAccountName $storageAccountName -StorageAccountKey $StorageAccountKey
+
+$MaxReturn = 100
+$Token = $Null
+
+do
+{
+# get a list of all of the blobs in the container
+$Blobs = Get-AzStorageBlob -Container $storageContainer -Context $ctx -IncludeDeleted -MaxCount $MaxReturn -ContinuationToken $Token
+write-host "========================================"
+write-host "All Blobs including soft deleted ones: "
+$Blobs.Name
+$c=0
+foreach($blob in $Blobs){
+if($blob.IsDeleted -eq "True")
+{
+write-host "========================================"
+$c++
+write-host "Blob name: " $blob.Name
+write-host "Deleted at: " $blob.ICloudBlob.Properties.DeletedTime.ToString()
+}
+}
+write-host "A total of " $c " blobs were soft deleted out of a total of " $Blobs.Name.Count " blobs"
+# To Undelete the blobs
+write-host "Undeleting blobs...."
+$Blobs.BlobBaseClient.Undelete()
+$Token = $blob[$blob.Count -1].ContinuationToken;
+}while ($Token -ne $Null)
