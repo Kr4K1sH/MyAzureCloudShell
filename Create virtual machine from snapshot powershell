@@ -1,0 +1,26 @@
+$snapshot = Get-AzureRmSnapshot -ResourceGroupName 'JosueGG' -SnapshotName 'jolinux'
+
+$diskConfig = New-AzureRmDiskConfig -Location $snapshot.Location -SourceResourceId $snapshot.Id -CreateOption Copy
+
+$disk = New-AzureRmDisk -Disk $diskConfig -ResourceGroupName 'JosueGG' -DiskName 'joliux'
+
+$vm = New-AzureRmVMConfig -VMName 'mysnaplinux' -VMSize 'Standard_D1'
+
+$vm = Set-AzureRmVMOSDisk -VM $vm -ManagedDiskId $disk.Id -CreateOption Attach -linux (or windows)
+
+$pip = New-AzureRmPublicIpAddress -Name 'PublicIPlinuxes' -ResourceGroupName 'JosueGG' -Location $snapshot.Location -AllocationMethod Dynamic
+
+$vnet = Get-AzureRmVirtualNetwork -Name 'myvnet' -ResourceGroupName 'JosueGG'
+
+--Can create a new virtual machine with usign new after azurermvirtualnetwork.
+
+$subnetConfig = Add-AzVirtualNetworkSubnetConfig -Name default -AddressPrefix 10.0.0.0/24 -VirtualNetwork $vnet
+
+(to make a bridge between the vnet and the subnet, that we have resently create)
+$vnet | Set-AzVirtualNetwork
+
+$nic = New-AzureRmNetworkInterface -Name 'lixs' -ResourceGroupName 'JosueGG' -Location $snapshot.Location -SubnetId $vnet.Subnets[0].Id -PublicIpAddressId $pip.Id
+
+$vm = Add-AzureRmVMNetworkInterface -VM $vm -Id $nic.Id
+
+New-AzureRmVM -VM $vm -ResourceGroupName 'JosueGG' -Location $snapshot.Location
