@@ -1,0 +1,19 @@
+WORK-AROUND : 
+As a workaround for anyone in the future who might run into this,
+Follow instructions,  https://docs.microsoft.com/en-us/azure/storage/files/storage-files-identity-ad-ds-enable#run-join-azstorageaccount
+You will absolutely get the domainDNS error, nothing you can do about it, but in the same powershell session, you do add the following.
+`
+$StorageAccountADCN = (Get-ADComputer -Identity $StorageAccountName).DistinguishedName
+$StorageAccountADSID = (Get-ADComputer -Identity $StorageAccountName).SID.Value
+New-AzStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $StorageAccountName -KeyName kerb1
+$KerbKey = Get-AzStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $StorageAccountName -ListKerbKey | where-object{$_.Keyname -contains "kerb1"}
+$NewPassword = ConvertTo-SecureString -String $KerbKey -AsPlainText -Force
+Set-ADAccountPassword -Identity $StorageAccountADCN -Reset -NewPassword $NewPassword
+`
+Then run,  https://docs.microsoft.com/en-us/azure/storage/files/storage-files-identity-ad-ds-enable#enable-the-feature-on-your-storage-account
+For whatever reason that function is broken now in latest modules and AzFilesHybrid, if someone can figure out what is wrong with Get-AzStorageAccountActiveDirectoryProperties, I think it would be helpful. I think it might be related to Windows 2019/2022 but I am unsure. After trying various combinations of install-module, requiredversion to try and make it work I was unable to.
+Then roll the kerberos keys,
+Update-AzStorageAccountADObjectPassword -RotateToKerbKey kerb2 -ResourceGroupName $ResourceGroupName -StorageAccountName $StorageAccountName
+you can confirm it worked via running,
+Debug-AzStorageAccountAuth -StorageAccountName $StorageAccountName -ResourceGroupName $ResourceGroupName -Verbose
+
